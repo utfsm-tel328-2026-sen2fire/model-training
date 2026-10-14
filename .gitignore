@@ -2,8 +2,46 @@
 .devenv/
 .direnv/
 .envrc
+.env
 
 # por si acaso
 venv/
 env/
 ENV/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+build/
+dist/
+.eggs/
+
+# Caches y herramientas
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyright_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# Editores / IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Checkpoints y runs de entrenamiento
+checkpoints/
+runs/
+wandb/

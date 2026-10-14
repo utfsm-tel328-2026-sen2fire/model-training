@@ -1,9 +1,18 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "model-training"
 version = "0.1.0"
-description = "Add your description here"
+description = "Sen2Fire fire-segmentation training pipeline"
 requires-python = ">=3.12"
 dependencies = [
     "numpy>=2.5.4",
+    "python-dotenv>=1.0",
     "torch>=2.14.1",
+    "tqdm>=4.66",
 ]
+
+[tool.setuptools.packages.find]
+where = ["src"]

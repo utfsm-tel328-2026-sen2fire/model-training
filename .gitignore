@@ -1,0 +1,9 @@
+.venv/
+.devenv/
+.direnv/
+.envrc
+
+# por si acaso
+venv/
+env/
+ENV/

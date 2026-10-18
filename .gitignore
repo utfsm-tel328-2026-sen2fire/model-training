@@ -45,3 +45,6 @@ Thumbs.db
 checkpoints/
 runs/
 wandb/
+
+Dataset/
+records/

@@ -3,9 +3,10 @@
 Entrenamiento de un U-Net para segmentación de fuego con imágenes proporcionadas por el satélite Sentinel-2.
 
 # Recursos
-  https://browser.dataspace.copernicus.eu/
-  https://zenodo.org/records/13384289
-  https://zenodo.org/records/10881058
+  - https://browser.dataspace.copernicus.eu/
+  - https://zenodo.org/records/13384289
+  - https://zenodo.org/records/10881058
+  
 ## Setup
 
 - Python 3.12, [uv](https://docs.astral.sh/uv/)

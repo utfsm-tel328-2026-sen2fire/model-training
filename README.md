@@ -4,8 +4,19 @@ Entrenamiento de un U-Net para segmentación de fuego con imágenes proporcionad
 
 ## Setup
 
-- Python 3.12, [uv](https://docs.astral.sh/uv/)
-- `uv sync` instala todo (incluye el paquete en modo editable)
+[uv](https://docs.astral.sh/uv/) gestiona el entorno: instala Python y las
+dependencias (incluido el paquete en modo editable).
+
+Elige el backend de PyTorch según tu GPU:
+
+| GPU              | Comando                  | Wheel que se instala                       |
+| ---------------- | ------------------------ | ------------------------------------------ |
+| NVIDIA           | `uv sync --extra cuda`   | `torch==2.11.0+cu128`  (último disponible) |
+| AMD (ROCm ≥ 7.1) | `uv sync --extra rocm`   | `torch==2.13.0+rocm7.1` (último disponible) |
+
+
+`uv.lock` incluye las dos variantes resueltas; se regenera con
+`uv lock --refresh` si cambian las dependencias o los índices de PyTorch.
 
 ## Variables de entorno (en `.env`)
 

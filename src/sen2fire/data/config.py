@@ -1,42 +1,75 @@
 from __future__ import annotations
 
 import os
+from collections import ChainMap
 from dataclasses import dataclass
 from pathlib import Path
 
+DEFAULT_ENV_FILE = ".env"
+DEFAULT_DATASET = "sen2fire"
+
+
+def env_prefix(name: str) -> str:
+    """'sen2fire' -> 'SEN2FIRE'. El prefijo con el que se nombran sus variables."""
+    return name.upper().replace("-", "_")
+
+
+def env_lookup(env_file: str | os.PathLike | None = DEFAULT_ENV_FILE) -> ChainMap:
+    """Capas de configuración: el entorno real gana sobre el .env.
+
+    Devolver un ChainMap en vez de llamar a load_dotenv() evita mutar os.environ
+    como efecto colateral, que hace imposible testear distintos .env en la
+    misma sesión y contamina cualquier código que se ejecute después.
+    """
+    from dotenv import dotenv_values
+
+    file_values: dict[str, str] = {}
+    if env_file is not None:
+        path = Path(env_file)
+        if path.is_file():
+            file_values = {k: v for k, v in dotenv_values(path).items() if v is not None}
+
+    return ChainMap(os.environ, file_values)
+
 
 @dataclass(frozen=True)
-class Config:
-    data_path: Path
-    cache_path: Path | None
+class SourceConfig:
+    """Dónde vive un dataset y si debe clonarse a local antes de leerlo."""
+
+    root: Path
+    cache_dir: Path | None = None
+
+    @property
+    def wants_local_copy(self) -> bool:
+        return self.cache_dir is not None
 
 
-def load_config(env_file: str | os.PathLike | None = ".env") -> Config:
-    from dotenv import load_dotenv
+def get_source_config(
+    name: str, env_file: str | os.PathLike | None = DEFAULT_ENV_FILE
+) -> SourceConfig:
+    """Lee la config de un dataset por convención: <PREFIX>_ROOT, <PREFIX>_LOCAL_CACHE.
 
-    if env_file is not None:
-        load_dotenv(env_file, override=False)
+    `root` es obligatorio; `cache_dir` es opcional y, si está, activa el clonado
+    a local una única vez por sesión de entrenamiento.
+    """
+    env = env_lookup(env_file)
+    prefix = env_prefix(name)
 
-    data = os.environ.get("SEN2FIRE_ROOT")
-    if not data:
+    root_raw = env.get(f"{prefix}_ROOT")
+    if not root_raw:
         raise RuntimeError(
-            "SEN2FIRE_ROOT no está definido. Configúralo en el .env o pásalo "
-            "como variable de entorno (apunta a la carpeta que contiene "
-            "scene1/, scene2/, ...)."
+            f"{prefix}_ROOT no está definido. Configuralo en el .env o pasalo como "
+            f"variable de entorno (apunta a la carpeta que contiene los datos "
+            f"del dataset {name!r})."
         )
 
-    data_path = Path(data).expanduser().resolve()
-    if not data_path.is_dir():
-        raise RuntimeError(f"SEN2FIRE_ROOT no existe o no es un directorio: {data_path}")
-    if not any(data_path.glob("scene*")):
-        raise RuntimeError(
-            f"SEN2FIRE_ROOT no contiene ninguna subcarpeta scene*: {data_path}"
-        )
+    root = Path(root_raw).expanduser().resolve()
 
-    cache_raw = os.environ.get("SEN2FIRE_LOCAL_CACHE")
-    cache_path: Path | None = None
-    if cache_raw:
-        cache_path = Path(cache_raw).expanduser().resolve()
-        cache_path.parent.mkdir(parents=True, exist_ok=True)
+    cache_raw = env.get(f"{prefix}_LOCAL_CACHE")
+    cache_dir = Path(cache_raw).expanduser().resolve() if cache_raw else None
 
-    return Config(data_path=data_path, cache_path=cache_path)
+    # Nota: no validamos que root exista acá a propósito. Si hay caché local
+    # completa, se puede entrenar aunque la montura NFS no esté disponible.
+    # `DatasetSource.materialize()` valida solo cuando realmente necesita leer
+    # del origen.
+    return SourceConfig(root=root, cache_dir=cache_dir)

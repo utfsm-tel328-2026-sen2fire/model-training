@@ -1,6 +1,6 @@
 """Loop de entrenamiento mínimo.
 
-Sirve como ejemplo canónico de cómo se usa `Sen2FireDataset` en un loop real.
+Sirve como ejemplo canónico de cómo se usa `load_dataset()` en un loop real.
 El modelo y la loss son intercambiables; el flujo del dataset es lo importante.
 
 Uso:
@@ -16,7 +16,8 @@ from pathlib import Path
 import torch
 from torch.utils.data import DataLoader, Subset
 
-from sen2fire.data import Sen2FireDataset, get_scene_split
+from sen2fire.data import load_dataset
+from sen2fire.data.datasets.sen2fire import get_scene_split
 from sen2fire.models import UNet, combined_loss
 
 
@@ -40,11 +41,13 @@ def run() -> None:
 
     # ---------------------------------------------------------------
     # 1) Cargar el dataset.
-    #    Sen2FireDataset() lee .env, clona el dataset al caché local
-    #    si hace falta (configurado en SEN2FIRE_LOCAL_CACHE), e
-    #    indexa todos los .npz encontrados.
+    #    load_dataset() lee el .env, resuelve dónde vive el dataset
+    #    (SEN2FIRE_ROOT), clona a la caché local una única vez si está
+    #    configurada (SEN2FIRE_LOCAL_CACHE) y devuelve el dataset ya
+    #    apuntando a la ruta desde la que hay que leer.
     # ---------------------------------------------------------------
-    ds = Sen2FireDataset()
+    ds = load_dataset()
+    print(f"dataset:   {type(ds).__name__}")
     print(f"root:     {ds.root}")
     print(f"patches:  {len(ds)}")
 
@@ -52,7 +55,7 @@ def run() -> None:
     # 2) Split por escena (train: scene1+scene2, val: scene3, test: scene4).
     #    Devuelve índices en el mismo orden que ds.samples.
     # ---------------------------------------------------------------
-    split = get_scene_split(ds.samples)
+    split = get_scene_split(ds)
     train_idx = split["train"]
     val_idx = split["val"]
     if args.limit_train is not None:

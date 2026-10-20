@@ -4,19 +4,21 @@ import time
 
 from torch.utils.data import DataLoader, Subset
 
-from sen2fire.data import Sen2FireDataset, get_scene_split
+from sen2fire.data import available_datasets, load_dataset
+from sen2fire.data.datasets.sen2fire import get_scene_split
 
 
 def main() -> None:
     t0 = time.perf_counter()
-    ds = Sen2FireDataset()
+    ds = load_dataset()
     t_load = time.perf_counter() - t0
 
+    print(f"dataset:   {type(ds).__name__}  (registrados: {', '.join(available_datasets())})")
     print(f"root:      {ds.root}")
     print(f"patches:   {len(ds)}")
     print(f"carga ds:  {t_load:.2f} s")
 
-    split = get_scene_split(ds.samples)
+    split = get_scene_split(ds)
     print(f"split:     train={len(split['train'])}  val={len(split['val'])}  test={len(split['test'])}")
 
     img, lbl = ds[0]

@@ -63,16 +63,18 @@ def main() -> None:
         save_config_callback=None,
         seed_everything_default=True,
         parser_kwargs={"parser_mode": "yaml"},
-        trainer_defaults={
-            "callbacks": [
-                {"class_path": f"{ExperimentRegistryCallback.__module__}.{ExperimentRegistryCallback.__name__}"},
-            ],
-        },
     )
+
+    # Enganchar el callback de registro de runs. `trainer_defaults={"callbacks": [...]}`
+    # no instanciaría el callback (dejaría el dict crudo en trainer.callbacks y
+    # Lightning revienta al hacer `callback.log = module.log`); post-init append es
+    # el camino limpio. Si el YAML ya lo declara, evitamos duplicarlo.
+    trainer = cli.trainer
+    if not any(isinstance(c, ExperimentRegistryCallback) for c in trainer.callbacks):
+        trainer.callbacks.append(ExperimentRegistryCallback())
 
     # Snapshot del YAML bajo el árbol del run.
     config_arg = _parse_config_arg(sys.argv)
-    trainer = cli.trainer
     if (
         config_arg is not None
         and trainer.is_global_zero

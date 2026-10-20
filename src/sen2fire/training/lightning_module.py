@@ -122,13 +122,12 @@ class Sen2FireSegModule(pl.LightningModule):
         oa = self.val_oa(preds, y)
 
         for idx, name in enumerate(("non_fire", "fire")):
-            self.log(f"val/iou_{name}", iou[idx], on_epoch=True, prog_bar=False)
+            self.log(f"val/iou_{name}", iou[idx], on_epoch=True, prog_bar=(name == "fire"))
             self.log(f"val/f1_{name}", f1[idx], on_epoch=True, prog_bar=False)
             self.log(f"val/precision_{name}", prec[idx], on_epoch=True, prog_bar=False)
             self.log(f"val/recall_{name}", rec[idx], on_epoch=True, prog_bar=False)
 
-        # Métrica principal: IoU de la clase fire.
-        self.log("val/iou_fire", iou[1], on_epoch=True, prog_bar=True)
+        # Métrica secundaria: pixel-OA (accuracy micro).
         self.log("val/oa", oa, on_epoch=True, prog_bar=True)
         return loss
 

@@ -2,6 +2,11 @@
   pkgs,
   ...
 }:
+let
+  gcc = pkgs.gcc.cc;
+  gccVersion = pkgs.gcc.version;
+  targetTriplet = pkgs.stdenv.hostPlatform.config;
+in
 {
   languages.python = {
     enable = true;
@@ -20,13 +25,14 @@
     };
   };
 
-  environment.variables = {
-    # MIOpen no puede JIT-compilar kernels de conv en NixOS: el clang embebido
-    # en libhiprtc.so busca los headers de la C++ standard library en
-    # /usr/include/c++/<ver>/, que no existe (viven en el nix store), y aborta
-    # con "fatal error: 'type_traits' file not found" -> core dump.
-    # FAST saltea el JIT: MIOpen elige un kernel precompilado por heurística.
-    # Inocuo en NVIDIA/CPU (no hay MIOpen ahí).
-    MIOPEN_FIND_MODE = "FAST";
+  env = {
+    # MIOpen JIT-compila los kernels de conv con el clang embebido en
+    # libhiprtc.so, que busca los headers de la C++ standard library en
+    # /usr/include/c++/<ver>/. Esa ruta no existe en NixOS, así que el
+    # compilación aborta con "fatal error: 'type_traits' file not found".
+    # CPATH le dice dónde están realmente (vienen con el gcc de nixpkgs).
+    # Referencia a pkgs.gcc.cc y no a un hash del store: se mueve solo con
+    # el pin de nixpkgs.
+    CPATH = "${gcc}/include/c++/${gccVersion}:${gcc}/include/c++/${gccVersion}/${targetTriplet}";
   };
 }

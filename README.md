@@ -75,6 +75,8 @@ src/sen2fire/
     source.py       DatasetSource: dónde vive el dataset y desde dónde se lee (NFS / caché)
     base.py         BaseSegmentationDataset: contrato común de los datasets
     registry.py     load_dataset(): nombre -> (config, fuente, clase)
+    datamodule.py   SegmentationDataModule (LightningDataModule): prepara la fuente,
+                    cachea el dataset y arma los DataLoaders train/val/test/predict
     datasets/
       sen2fire.py   Sen2FireNpzDataset: solo el formato .npz de Sen2Fire
   models/           U-Net, Dice + BCE

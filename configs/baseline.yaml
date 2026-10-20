@@ -40,7 +40,7 @@ trainer:
   accelerator: gpu
   devices: 1
   precision: 16-mixed       # null en ROCm si 16-mixed da problemas; usar bf16-mixed en Ampere+
-  cudnn_benchmark: true
+  benchmark: true           # torch.backends.cudnn.benchmark = True (paper)
   enable_progress_bar: true
   enable_model_summary: true
 

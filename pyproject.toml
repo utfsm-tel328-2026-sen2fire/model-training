@@ -24,6 +24,7 @@ rocm = [
 
 [dependency-groups]
 dev = [
+    "jsonargparse[signatures]>=4.27.7",
     "pytest>=8.0",
     "tensorboard>=2.16,<3",
 ]

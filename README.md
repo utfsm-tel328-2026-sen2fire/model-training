@@ -22,8 +22,24 @@ Elige el backend de PyTorch según tu GPU:
 
 | Variable | Requerida | Default | Descripción |
 |---|---|---|---|
+| `DATASET` | no | `sen2fire` | Qué dataset del registro cargar |
 | `SEN2FIRE_ROOT` | sí | — | Ruta al dataset (NFS o local) con `scene1/`, `scene2/`, … |
-| `SEN2FIRE_LOCAL_CACHE` | no | sin caché | Ruta local donde clonar el dataset la primera vez |
+| `SEN2FIRE_LOCAL_CACHE` | no | sin caché | Si se define, el dataset se clona una vez a esa ruta local |
+
+Las variables reales del entorno pisan a las del `.env`, así que podés
+sobrescribir sin editar el archivo:
+
+```bash
+SEN2FIRE_LOCAL_CACHE= python train.py    # entrena leyendo directo de la NFS
+```
+
+### Caché local
+
+Con `SEN2FIRE_LOCAL_CACHE=/tmp/sen2fire_local` el dataset se clona completo una
+única vez y toda la sesión lee desde `/tmp`, que se borra al reiniciar la
+máquina. Al terminar la clonación se escribe un sello `.dataset-cache.json` en
+el destino: las corridas siguientes validan la copia local **sin tocar la
+montura de red**, así que se puede entrenar con la NFS caída o desconectada.
 
 ## Uso
 
@@ -36,14 +52,45 @@ python train.py --epochs 1 --batch-size 1 --num-workers 0 --limit-train 4 --limi
 
 # entrenamiento real
 python train.py --epochs 10 --batch-size 2 --num-workers 2
+
+# tests del flujo de carga (sin red, sin .env, sin GPU)
+python tests/test_data.py
 ```
 
 ## Estructura
 
 ```
 src/sen2fire/
-  data/    config, cache, dataset
-  models/  U-Net, Dice + BCE
-main.py    smoke test del loader
-train.py   loop de entrenamiento
+  data/
+    config.py       lectura de .env por convención <PREFIX>_ROOT / <PREFIX>_LOCAL_CACHE
+    source.py       DatasetSource: dónde vive el dataset y desde dónde se lee (NFS / caché)
+    base.py         BaseSegmentationDataset: contrato común de los datasets
+    registry.py     load_dataset(): nombre -> (config, fuente, clase)
+    datasets/
+      sen2fire.py   Sen2FireNpzDataset: solo el formato .npz de Sen2Fire
+  models/           U-Net, Dice + BCE
+tests/
+  test_data.py      tests del flujo de carga
+  make_fake_data.py genera un dataset sintético para probar sin la NFS
+main.py             smoke test del loader
+train.py            loop de entrenamiento
+```
+
+### Agregar un dataset
+
+La fuente (dónde está y si se clona) y el formato (cómo se lee) son
+independientes. Para soportar un dataset nuevo:
+
+1. Subclasear `BaseSegmentationDataset` implementando `_index()` y
+   `_load_sample()` en `src/sen2fire/data/datasets/<nombre>.py`.
+2. `register("<nombre>", TuDataset)` en `registry.py`.
+3. Agregar `<PREFIX>_ROOT` (y opcionalmente `<PREFIX>_LOCAL_CACHE`) al `.env`.
+
+`main.py` y `train.py` no cambian. La clase recibe un `root` ya resuelto, así
+que se puede testear contra un directorio temporal sin tocar el entorno:
+
+```python
+from sen2fire.data.datasets.sen2fire import Sen2FireNpzDataset
+
+ds = Sen2FireNpzDataset(root="/tmp/fixtures/sen2fire", normalize="reflectance")
 ```

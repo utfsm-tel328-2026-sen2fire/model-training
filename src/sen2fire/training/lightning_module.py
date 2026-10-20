@@ -154,6 +154,11 @@ class Sen2FireSegModule(pl.LightningModule):
 
     @rank_zero_only
     def on_train_start(self) -> None:
+        # Lightning avisa cuando detecta Tensor Cores sin usar TF32. "high" deja
+        # que PyTorch elija TF32 en matmul de fp32: mismo accuracy efectivo, mucho
+        # más rápido en conv/matmul grandes. Inocuo si la GPU no tiene TC.
+        torch.set_float32_matmul_precision("high")
+
         n = sum(p.numel() for p in self.parameters())
         msg = f"UNet params={n/1e6:.2f}M base={self.hparams.base} depth={self.hparams.depth} bilinear={self.hparams.bilinear}"
         self.log("model/info", 1.0, prog_bar=False, logger=False, batch_size=1)

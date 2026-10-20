@@ -9,15 +9,14 @@ Uso:
 from __future__ import annotations
 
 import argparse
+import os
 import time
 from datetime import datetime
 from pathlib import Path
 
 import torch
-from torch.utils.data import DataLoader, Subset
 
-from sen2fire.data import load_dataset
-from sen2fire.data.datasets.sen2fire import get_scene_split
+from sen2fire.data import SegmentationDataModule
 from sen2fire.models import UNet, combined_loss
 
 
@@ -28,6 +27,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--lr", type=float, default=1e-3)
     p.add_argument("--num-workers", type=int, default=2)
     p.add_argument("--output-dir", type=Path, default=Path("checkpoints"))
+    p.add_argument("--dataset", default=os.environ.get("DATASET", "sen2fire"),
+                   help="Nombre del dataset en el registro (ver sen2fire.data.registry)")
+    p.add_argument("--env-file", default=".env",
+                   help="Ruta al .env con las variables del dataset")
     p.add_argument("--limit-train", type=int, default=None,
                    help="Subset los primeros N patches de train (smoke test)")
     p.add_argument("--limit-val", type=int, default=None)
@@ -40,52 +43,37 @@ def run() -> None:
     print(f"device: {device}")
 
     # ---------------------------------------------------------------
-    # 1) Cargar el dataset.
-    #    load_dataset() lee el .env, resuelve dónde vive el dataset
-    #    (SEN2FIRE_ROOT), clona a la caché local una única vez si está
-    #    configurada (SEN2FIRE_LOCAL_CACHE) y devuelve el dataset ya
-    #    apuntando a la ruta desde la que hay que leer.
+    # 1) LightningDataModule: encapsula fuente, dataset, splits y dataloaders.
+    #    `prepare_data()` es idempotente y materializa la caché local una
+    #    sola vez si está configurada; `setup("fit")` instancia los Subsets
+    #    una única vez por instancia, así no relista la NFS en cada stage.
     # ---------------------------------------------------------------
-    ds = load_dataset()
-    print(f"dataset:   {type(ds).__name__}")
-    print(f"root:     {ds.root}")
-    print(f"patches:  {len(ds)}")
-
-    # ---------------------------------------------------------------
-    # 2) Split por escena (train: scene1+scene2, val: scene3, test: scene4).
-    #    Devuelve índices en el mismo orden que ds.samples.
-    # ---------------------------------------------------------------
-    split = get_scene_split(ds)
-    train_idx = split["train"]
-    val_idx = split["val"]
-    if args.limit_train is not None:
-        train_idx = train_idx[: args.limit_train]
-    if args.limit_val is not None:
-        val_idx = val_idx[: args.limit_val]
-    print(f"split:    train={len(train_idx)}  val={len(val_idx)}")
-
-    # ---------------------------------------------------------------
-    # 3) Subset + DataLoader — el patrón estándar de PyTorch.
-    #    ds[i] devuelve (image, label) con image float32 (12, 512, 512)
-    #    normalizada a reflectancia y label long (512, 512) en {0, 1}.
-    # ---------------------------------------------------------------
-    train_loader = DataLoader(
-        Subset(ds, train_idx),
+    dm = SegmentationDataModule(
+        name=args.dataset,
+        env_file=args.env_file,
         batch_size=args.batch_size,
-        shuffle=True,
         num_workers=args.num_workers,
         pin_memory=(device.type == "cuda"),
+        limit_train=args.limit_train,
+        limit_val=args.limit_val,
     )
-    val_loader = DataLoader(
-        Subset(ds, val_idx),
-        batch_size=args.batch_size,
-        shuffle=False,
-        num_workers=args.num_workers,
-        pin_memory=(device.type == "cuda"),
-    )
+    dm.prepare_data()
+    dm.setup("fit")
+
+    print(f"dataset:   {type(dm.ds).__name__}")
+    print(f"root:     {dm.ds.root}")
+    print(f"patches:  {len(dm.ds)}")
+    print(f"split:    train={len(dm.train_dataset)}  val={len(dm.val_dataset)}")
 
     # ---------------------------------------------------------------
-    # 4) Modelo, loss y optimizador.
+    # 2) DataLoaders del módulo. ds[i] devuelve (image float32 (12, 512, 512)
+    #    normalizada, label long (512, 512) en {0, 1}).
+    # ---------------------------------------------------------------
+    train_loader = dm.train_dataloader()
+    val_loader = dm.val_dataloader()
+
+    # ---------------------------------------------------------------
+    # 3) Modelo, loss y optimizador.
     # ---------------------------------------------------------------
     model = UNet(in_channels=12, out_channels=1).to(device)
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
@@ -93,7 +81,7 @@ def run() -> None:
     print(f"modelo:   UNet ({n_params/1e6:.2f}M params)")
 
     # ---------------------------------------------------------------
-    # 5) Loop de entrenamiento.
+    # 4) Loop de entrenamiento.
     # ---------------------------------------------------------------
     args.output_dir.mkdir(parents=True, exist_ok=True)
     run_id = datetime.now().strftime("%Y%m%d_%H%M%S")

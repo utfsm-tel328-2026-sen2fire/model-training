@@ -44,4 +44,7 @@ Thumbs.db
 # Checkpoints y runs de entrenamiento
 checkpoints/
 runs/
+tb_logs/
+lightning_logs/
 wandb/
+Baseline_code/

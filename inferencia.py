@@ -9,13 +9,13 @@ def mask_ensamble():
     model = UNet(in_channels=12, out_channels=3).to(device)
 
     # Cargar pesos del modelo desde un checkpoint
-    weight_path = "/home/antonio/Documents/U/TEL328/model-training/checkpoints/20261016_105537/last.pt"
+    weight_path = "/home/antonio/TK_Stratego/Shared/Dataset/Pesos/Segundo_Peso/best.pt"
     checkpoint = torch.load(weight_path, map_location=device, weights_only=False)
     model.load_state_dict(checkpoint["model"])
     model.eval()
 
     # Cargamos imagen del stratego -> dataset
-    npz_image_path = "/home/antonio/TK_Stratego/Shared/Dataset/Sen2Fire/scene1/scene_1_patch_16_9.npz"
+    npz_image_path = "/home/antonio/TK_Stratego/Shared/Dataset/Sen2Fire/scene3/scene_3_patch_14_23.npz"
     data = np.load(npz_image_path)
     img_np = data['image'].astype(np.float32)
 

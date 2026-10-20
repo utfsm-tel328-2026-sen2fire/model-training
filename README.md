@@ -18,6 +18,15 @@ Elige el backend de PyTorch según tu GPU:
 `uv.lock` incluye las dos variantes resueltas; se regenera con
 `uv lock --refresh` si cambian las dependencias o los índices de PyTorch.
 
+`pytest` viene en el grupo `dev`, que `uv sync` instala siempre. Si solo
+querés agregar las herramientas de desarrollo sin volver a fijar el backend de
+torch (que sí o sí se desinstalaría con un `uv sync` pelado, porque torch solo
+está en los extras), usá:
+
+```bash
+uv sync --inexact    # instala pytest y no toca tu torch
+```
+
 ## Variables de entorno (en `.env`)
 
 | Variable | Requerida | Default | Descripción |
@@ -53,8 +62,8 @@ python train.py --epochs 1 --batch-size 1 --num-workers 0 --limit-train 4 --limi
 # entrenamiento real
 python train.py --epochs 10 --batch-size 2 --num-workers 2
 
-# tests del flujo de carga (sin red, sin .env, sin GPU)
-python tests/test_data.py
+# tests del flujo de carga (sin red, sin GPU, sin el dataset real)
+pytest
 ```
 
 ## Estructura
@@ -70,8 +79,9 @@ src/sen2fire/
       sen2fire.py   Sen2FireNpzDataset: solo el formato .npz de Sen2Fire
   models/           U-Net, Dice + BCE
 tests/
-  test_data.py      tests del flujo de carga
-  make_fake_data.py genera un dataset sintético para probar sin la NFS
+  conftest.py        fixtures (dataset sintético en tmp_path)
+  test_data.py       tests del flujo de carga
+  make_fake_data.py  genera un dataset sintético para probar sin la NFS
 main.py             smoke test del loader
 train.py            loop de entrenamiento
 ```

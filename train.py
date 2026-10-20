@@ -36,6 +36,7 @@ from pytorch_lightning.cli import LightningCLI
 
 from sen2fire.data import SegmentationDataModule
 from sen2fire.training.lightning_module import Sen2FireSegModule
+from sen2fire.training.registry import ExperimentRegistryCallback
 
 
 def _parse_config_arg(argv: list[str]) -> Path | None:
@@ -62,6 +63,11 @@ def main() -> None:
         save_config_callback=None,
         seed_everything_default=True,
         parser_kwargs={"parser_mode": "yaml"},
+        trainer_defaults={
+            "callbacks": [
+                {"class_path": f"{ExperimentRegistryCallback.__module__}.{ExperimentRegistryCallback.__name__}"},
+            ],
+        },
     )
 
     # Snapshot del YAML bajo el árbol del run.

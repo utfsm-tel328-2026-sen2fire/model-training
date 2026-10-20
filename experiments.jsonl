@@ -1,0 +1,18 @@
+# experiments.jsonl
+#
+# Registro append-only de runs de entrenamiento. Una línea JSON por run. Vive en
+# git para que los dos colaboradores vean "qué corrió el otro" sin NFS adicional.
+#
+# Cada entrada la escribe `sen2fire.training.registry.ExperimentRegistryCallback`
+# en `on_fit_end` (status=completed) o `on_exception` (status=crashed). El callback
+# también escribe `summary.json` bajo el NFS raíz del run. Los checkpoints
+# grandes (.ckpt) NO están acá; viven en la NFS (configurable vía
+# NFS_SEN2FIRE_RUNS_ROOT).
+#
+# Reproducción:
+#   python -c "from sen2fire.training.reproduce import run; run('<run_id>')"
+# o manual:
+#   python train.py fit --config configs/baseline.yaml
+#
+# Consulta rápida:
+#   jq -r '. | "\(.user)\t\(.created_at)\t\(.status)\t\(.best_val_iou_fire)"' experiments.jsonl | column -t

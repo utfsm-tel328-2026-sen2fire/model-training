@@ -21,6 +21,11 @@ rocm = [
     "triton-rocm ; sys_platform == 'linux'",
 ]
 
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
 [tool.uv]
 conflicts = [
   [{ extra = "cuda" }, { extra = "rocm" }],
@@ -38,6 +43,10 @@ torchvision = [
 triton-rocm = [
   { index = "pytorch-rocm",  extra = "rocm", marker = "sys_platform == 'linux'" },
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["tests"]
 
 [[tool.uv.index]]
 name = "pytorch-cu128"

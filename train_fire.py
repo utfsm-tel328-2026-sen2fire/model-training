@@ -71,6 +71,33 @@ def early_stopping(val_losses, patience=5):
     # return True si todas las pérdidas recientes son mayores que la mejor pérdida anterior
     return all(loss >= best_loss for loss in recent_losses)
 
+def count_classes(dataset, index):
+    # contador de pixeles por clase [fondo, fuego]
+    counter = torch.zeros(2, dtype=torch.long)
+
+    for i in index:
+
+        _, label = dataset[i]
+
+        amount = torch.bincount(label.long().flatten(), minlength=2)
+
+        if amount.numel() != 2:
+            raise ValueError(f"Error, labels incorrectos para el parche {i}")
+
+        counter += amount
+
+    return counter
+
+def calculate_fire_percentage(train_counts):
+
+    total_pixeles = train_counts.sum().item()
+
+    porcentaje_fuego = (
+        train_counts[1].item() / total_pixeles
+    ) * 100
+
+    print(f"\nPorcentaje de fuego en entrenamiento: {porcentaje_fuego:.4f}%")
+
 
 def run() -> None:
 
@@ -86,7 +113,7 @@ def run() -> None:
     # Archivo CSV para guardar los resultados del entrenamiento.
     fecha_hora = datetime.now().strftime("%d_%m_%Y-%H_%M_%S")
     path_csv = record_result_path / f"training_results_{fecha_hora}.csv"
-    headings = ["epoch", "train_loss", "val_loss", "val_IoU", "val_Dice", "time"]
+    headings = ["epoch", "train_loss", "val_loss", "val_IoU", "val_Dice", "val_Precision", "val_Recall","time"]
 
     val_losses = []
     best_val_loss = float('inf')
@@ -112,6 +139,14 @@ def run() -> None:
     split = get_scene_split(ds.samples)
     train_idx = split["train"]
     val_idx = split["val"]
+
+    # Contar la cantidad de pixeles por clase en los conjuntos de entrenamiento y validación
+    train_counts = count_classes(ds, train_idx)
+    val_counts = count_classes(ds, val_idx)
+    print(f"Clases de entrenamiento: {train_counts}")
+    print(f"Clases de validación: {val_counts}")
+    calculate_fire_percentage(train_counts)
+
     if args.limit_train is not None:
         train_idx = train_idx[: args.limit_train]
     if args.limit_val is not None:
@@ -182,6 +217,9 @@ def run() -> None:
         val_batches = 0
         val_iou_sum = 0.0
         val_dice_sum = 0.0
+        val_tp = 0
+        val_fp = 0
+        val_fn = 0
 
         with torch.no_grad():
             for image, label in val_loader:
@@ -190,6 +228,13 @@ def run() -> None:
 
                 logits = model(image)
                 loss = criterion(logits, label.squeeze(1).long())
+
+                preds = torch.argmax(logits, dim=1)
+                # Calcular métricas de IoU y Dice
+                labels = label.squeeze(1) if label.ndim == 4 else label
+                val_tp += ((preds == 1) & (labels == 1)).sum().item()
+                val_fp += ((preds == 1) & (labels == 0)).sum().item()
+                val_fn += ((preds == 0) & (labels == 1)).sum().item()
 
                 batch_iou, batch_dice = calculate_metrics(logits, label)
 
@@ -200,13 +245,20 @@ def run() -> None:
 
 
         val_loss = val_loss_sum / max(val_batches, 1)
-        val_iou = val_iou_sum / max(val_batches, 1)
-        val_dice = val_dice_sum / max(val_batches, 1)
+        val_iou = val_tp / max(val_tp + val_fp + val_fn, 1)
+        val_dice = (2 * val_tp) / max(2 * val_tp + val_fp + val_fn, 1)
+        val_precision = val_tp / max(val_tp + val_fp, 1)
+        val_recall = val_tp / max(val_tp + val_fn, 1)
         val_losses.append(val_loss)
         dt = time.perf_counter() - t0
 
+        print("\nResultados de detección:")
+        print(f"True Positives:  {val_tp}")
+        print(f"False Positives: {val_fp}")
+        print(f"False Negatives: {val_fn}")
+
         print(f"epoch {epoch+1}/{args.epochs}  "
-              f"train_loss={train_loss:.4f}  val_loss={val_loss:.4f}  val_IoU={val_iou:.4f}  val_Dice={val_dice:.4f}  "
+              f"train_loss={train_loss:.4f}  val_loss={val_loss:.4f}  val_IoU={val_iou:.4f}  val_Dice={val_dice:.4f}  val_Precision={val_precision:.4f}  val_Recall={val_recall:.4f}  "
               f"({dt:.1f} s)")
 
         # Guardar resultados en CSV
@@ -214,7 +266,7 @@ def run() -> None:
             writer = csv.writer(archive)
             if epoch == 0:
                 writer.writerow(headings)
-            writer.writerow([epoch + 1, train_loss, val_loss, val_iou, val_dice, dt])
+            writer.writerow([epoch + 1, train_loss, val_loss, val_iou, val_dice, val_precision, val_recall, dt])
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
@@ -229,6 +281,7 @@ def run() -> None:
                 writer.writerow(["Early stopping activado en epoch", epoch + 1, "Mejor val_loss:", best_val_loss])
 
             break
+
 
     # Checkpoint al final
     ckpt_path = run_dir / "last.pt"

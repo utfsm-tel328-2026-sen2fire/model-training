@@ -14,11 +14,17 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-cuda = ["torch", "torchvision"]
+cuda = ["torch", "torchvision", "lightning>=2.5,<3"]
 rocm = [
     "torch ; sys_platform == 'linux'",
     "torchvision ; sys_platform == 'linux'",
     "triton-rocm ; sys_platform == 'linux'",
+    "lightning>=2.5,<3 ; sys_platform == 'linux'",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
 ]
 
 [tool.uv]
@@ -38,6 +44,10 @@ torchvision = [
 triton-rocm = [
   { index = "pytorch-rocm",  extra = "rocm", marker = "sys_platform == 'linux'" },
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["tests"]
 
 [[tool.uv.index]]
 name = "pytorch-cu128"

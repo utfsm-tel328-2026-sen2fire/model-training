@@ -1,12 +1,21 @@
-from .cache import prepare_cache, resolve_root
-from .config import Config, load_config
-from .dataset import Sen2FireDataset, get_scene_split
+from .base import BaseSegmentationDataset, split_by_groups
+from .config import SourceConfig, get_source_config
+from .datamodule import SegmentationDataModule
+from .registry import DatasetSpec, available_datasets, load_dataset, register
+from .source import DatasetSource, cache_is_usable, cache_matches_source, prepare_cache
 
 __all__ = [
-    "Config",
-    "load_config",
+    "BaseSegmentationDataset",
+    "split_by_groups",
+    "SourceConfig",
+    "get_source_config",
+    "DatasetSpec",
+    "available_datasets",
+    "load_dataset",
+    "register",
+    "DatasetSource",
+    "cache_is_usable",
+    "cache_matches_source",
     "prepare_cache",
-    "resolve_root",
-    "Sen2FireDataset",
-    "get_scene_split",
+    "SegmentationDataModule",
 ]

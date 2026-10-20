@@ -14,11 +14,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-cuda = ["torch", "torchvision"]
+cuda = ["torch", "torchvision", "lightning>=2.5,<3"]
 rocm = [
     "torch ; sys_platform == 'linux'",
     "torchvision ; sys_platform == 'linux'",
     "triton-rocm ; sys_platform == 'linux'",
+    "lightning>=2.5,<3 ; sys_platform == 'linux'",
 ]
 
 [dependency-groups]

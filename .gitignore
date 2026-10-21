@@ -48,3 +48,12 @@ tb_logs/
 lightning_logs/
 wandb/
 Baseline_code/
+
+# Baseline local
+baseline_local.yaml
+
+# Carpeta predicciones
+predicciones/
+
+# Training results
+records/

@@ -30,13 +30,14 @@ model:
 data:
   name: sen2fire
   env_file: .env
-  batch_size: 8             # paper
+  batch_size: 2            # paper
   num_workers: 0            # paper (single-threaded)
   pin_memory: true
 
 trainer:
   max_steps: 5000           # step-based (paper); dejá en null si querés epoch-based
   val_check_interval: 500   # validar cada 500 iteraciones (paper)
+  check_val_every_n_epoch: null  # no usar epoch-based validation
   accelerator: gpu
   devices: 1
   precision: 16-mixed       # null en ROCm si 16-mixed da problemas; usar bf16-mixed en Ampere+

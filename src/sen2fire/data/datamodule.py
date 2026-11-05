@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from typing import Any, Callable, Sequence
 
-import lightning as L
+import pytorch_lightning as L
 from torch.utils.data import DataLoader, Subset
 
 from .base import BaseSegmentationDataset, split_by_groups

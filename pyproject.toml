@@ -8,6 +8,7 @@ version = "0.1.0"
 description = "Sen2Fire fire-segmentation training pipeline"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "matplotlib>=3.11.2",
     "numpy>=2.5.4",
     "python-dotenv>=1.0",
     "tqdm>=4.66",
@@ -24,7 +25,9 @@ rocm = [
 
 [dependency-groups]
 dev = [
+    "jsonargparse[signatures]>=4.27.7",
     "pytest>=8.0",
+    "tensorboard>=2.16,<3",
 ]
 
 [tool.uv]

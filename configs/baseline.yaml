@@ -1,0 +1,48 @@
+# Config base para reproducir el recipe del paper Sen2Fire.
+#
+# Uso:
+#   python train.py fit --config configs/baseline.yaml
+#
+# "Un experimento = un YAML". Commiteálo a git para que tu compañero vea qué
+# corriste desde el JSONL (experiments.jsonl) y desde git history.
+#
+# Para experimentar SIN tocar este archivo, copialo a configs/experiments/<user>/
+# y modificá la copia. El CLI acepta cualquier ruta vía --config.
+
+seed_everything: 1234       # igual que Baseline_code/Train.py:init_seeds(seed=1234)
+
+model:
+  in_channels: 12           # 12 bandas Sentinel-2 (paper modo 0); usar 13 con aerosol
+  n_classes: 2              # fire / non-fire
+  base: 64                  # canales en la primera etapa (paper)
+  depth: 5                  # 4 downs + 4 ups (paper)
+  bilinear: true            # Upsample bilinear align_corners=True (paper)
+  optimizer: adam           # paper usa Adam (no AdamW)
+  learning_rate: 1.0e-4     # paper
+  weight_decay: 5.0e-4      # paper
+  ce_weight_fire: 10.0      # paper CrossEntropyLoss(weight=[1, 10])
+  lr_schedule: poly         # polinomial (1 - step/max_steps)**0.9
+  power: 0.9                # exponente del decay polinomial
+  max_steps: 5000           # paper num_steps = 5000
+  interpolate_to: [512, 512]  # tamaño al que el módulo interpola logits antes de la loss
+  sgd_momentum: 0.9
+
+data:
+  name: sen2fire
+  env_file: .env
+  batch_size: 2            # paper
+  num_workers: 0            # paper (single-threaded)
+  pin_memory: true
+
+trainer:
+  max_steps: 5000           # step-based (paper); dejá en null si querés epoch-based
+  val_check_interval: 500   # validar cada 500 iteraciones (paper)
+  check_val_every_n_epoch: null  # no usar epoch-based validation
+  accelerator: gpu
+  devices: 1
+  precision: 16-mixed       # null en ROCm si 16-mixed da problemas; usar bf16-mixed en Ampere+
+  benchmark: true           # torch.backends.cudnn.benchmark = True (paper)
+  enable_progress_bar: true
+  enable_model_summary: true
+
+  # Callbacks y logger vienen en una sección aparte en LightningCLI sub-comando `trainer.callbacks` (no acá).

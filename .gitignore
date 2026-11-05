@@ -44,4 +44,20 @@ Thumbs.db
 # Checkpoints y runs de entrenamiento
 checkpoints/
 runs/
+tb_logs/
+lightning_logs/
 wandb/
+Baseline_code/
+
+# Baseline local
+baseline_local.yaml
+
+# Carpeta predicciones
+predicciones/
+
+# Training results
+records/
+
+# AI
+.opencode/
+openspec/

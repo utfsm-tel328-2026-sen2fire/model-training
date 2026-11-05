@@ -1,4 +1,3 @@
-from .losses import DiceLoss, combined_loss
-from .model import UNet
+from .model import DoubleConv, Down, OutConv, UNet, Up
 
-__all__ = ["UNet", "DiceLoss", "combined_loss"]
+__all__ = ["UNet", "DoubleConv", "Down", "Up", "OutConv"]

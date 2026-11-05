@@ -57,3 +57,7 @@ predicciones/
 
 # Training results
 records/
+
+# AI
+.opencode/
+openspec/
